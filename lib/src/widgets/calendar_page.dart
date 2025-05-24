@@ -15,7 +15,7 @@ class CalendarPage extends StatelessWidget {
   final bool dowVisible;
   final bool weekNumberVisible;
   final double? dowHeight;
-
+  final int daysInWeek;
   const CalendarPage({
     super.key,
     required this.visibleDays,
@@ -29,6 +29,7 @@ class CalendarPage extends StatelessWidget {
     this.dowVisible = true,
     this.weekNumberVisible = false,
     this.dowHeight,
+    this.daysInWeek = DateTime.daysPerWeek,
   })  : assert(!dowVisible || (dowHeight != null && dowBuilder != null)),
         assert(!weekNumberVisible || weekNumberBuilder != null);
 
@@ -55,7 +56,7 @@ class CalendarPage extends StatelessWidget {
   }
 
   Widget _buildWeekNumbers(BuildContext context) {
-    final rowAmount = visibleDays.length ~/ 7;
+    final rowAmount = visibleDays.length ~/ daysInWeek;
 
     return Column(
       children: [
@@ -63,7 +64,7 @@ class CalendarPage extends StatelessWidget {
         ...List.generate(
           rowAmount,
           (index) => Expanded(
-            child: weekNumberBuilder!(context, visibleDays[index * 7]),
+            child: weekNumberBuilder!(context, visibleDays[index * daysInWeek]),
           ),
         ),
       ],
@@ -74,22 +75,22 @@ class CalendarPage extends StatelessWidget {
     return TableRow(
       decoration: dowDecoration,
       children: List.generate(
-        7,
+        daysInWeek,
         (index) => dowBuilder!(context, visibleDays[index]),
       ),
     );
   }
 
   List<TableRow> _buildCalendarDays(BuildContext context) {
-    final rowAmount = visibleDays.length ~/ 7;
+    final rowAmount = visibleDays.length ~/ daysInWeek;
 
     return List.generate(
       rowAmount,
       (index) => TableRow(
         decoration: rowDecoration,
         children: List.generate(
-          7,
-          (id) => dayBuilder(context, visibleDays[index * 7 + id]),
+          daysInWeek,
+          (id) => dayBuilder(context, visibleDays[index * daysInWeek + id]),
         ),
       ),
     );
