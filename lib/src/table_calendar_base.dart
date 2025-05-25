@@ -7,9 +7,9 @@ import 'package:table_calendar/src/shared/utils.dart';
 import 'package:table_calendar/src/widgets/calendar_core.dart';
 
 const kDefaultAvailableCalendarFormats = {
-  CalendarFormat.month: 'Month',
-  CalendarFormat.twoWeeks: '2 weeks',
-  CalendarFormat.week: 'Week',
+  CalendarFormat.month: 'Ay',
+  CalendarFormat.twoWeeks: '2 hafta',
+  CalendarFormat.week: 'Hafta',
 };
 const kDefaultWeekendDays = [DateTime.saturday, DateTime.sunday];
 
