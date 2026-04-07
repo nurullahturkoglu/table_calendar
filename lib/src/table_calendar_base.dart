@@ -44,6 +44,7 @@ class TableCalendarBase extends StatefulWidget {
   final void Function(PageController pageController)? onCalendarCreated;
   final bool onlyWeekdays;
   final List<int> weekendDays;
+  final bool trimEmptyWeekRows;
 
   TableCalendarBase({
     super.key,
@@ -77,6 +78,7 @@ class TableCalendarBase extends StatefulWidget {
     this.availableCalendarFormats = kDefaultAvailableCalendarFormats,
     this.onlyWeekdays = false,
     this.weekendDays = kDefaultWeekendDays,
+    this.trimEmptyWeekRows = false,
     this.onVerticalSwipe,
     this.onPageChanged,
     this.onCalendarCreated,
@@ -132,7 +134,10 @@ class _TableCalendarBaseState extends State<TableCalendarBase> {
     if (widget.rowHeight != oldWidget.rowHeight ||
         widget.dowHeight != oldWidget.dowHeight ||
         widget.dowVisible != oldWidget.dowVisible ||
-        widget.sixWeekMonthsEnforced != oldWidget.sixWeekMonthsEnforced) {
+        widget.sixWeekMonthsEnforced != oldWidget.sixWeekMonthsEnforced ||
+        widget.trimEmptyWeekRows != oldWidget.trimEmptyWeekRows ||
+        widget.onlyWeekdays != oldWidget.onlyWeekdays ||
+        widget.weekendDays != oldWidget.weekendDays) {
       final rowCount = _getRowCount(widget.calendarFormat, _focusedDay);
       _pageHeight.value = _getPageHeight(rowCount);
     }
@@ -241,6 +246,7 @@ class _TableCalendarBaseState extends State<TableCalendarBase> {
               rowDecoration: widget.rowDecoration,
               tableBorder: widget.tableBorder,
               tablePadding: widget.tablePadding,
+              trimEmptyWeekRows: widget.trimEmptyWeekRows,
               onPageChanged: (index, focusedMonth) {
                 if (!_pageCallbackDisabled) {
                   if (!isSameDay(_focusedDay, focusedMonth)) {
@@ -326,6 +332,30 @@ class _TableCalendarBaseState extends State<TableCalendarBase> {
     final last = _lastDayOfMonth(focusedDay);
     final daysAfter = _getDaysAfter(last);
     final lastToDisplay = last.add(Duration(days: daysAfter));
+
+    if (widget.trimEmptyWeekRows && widget.onlyWeekdays) {
+      final dayCount = lastToDisplay.difference(firstToDisplay).inDays + 1;
+      final allDays = List.generate(
+        dayCount,
+        (index) =>
+            DateTime.utc(firstToDisplay.year, firstToDisplay.month, firstToDisplay.day + index),
+      )..removeWhere((d) => widget.weekendDays.contains(d.weekday));
+
+      final daysInWeek = DateTime.daysPerWeek - widget.weekendDays.length;
+      if (allDays.isEmpty || allDays.length % daysInWeek != 0) {
+        return (lastToDisplay.difference(firstToDisplay).inDays + 1) ~/ 7;
+      }
+
+      int rows = 0;
+      for (int i = 0; i < allDays.length; i += daysInWeek) {
+        final week = allDays.sublist(i, i + daysInWeek);
+        final hasInMonth = week.any(
+          (d) => d.year == focusedDay.year && d.month == focusedDay.month,
+        );
+        if (hasInMonth) rows++;
+      }
+      return rows == 0 ? 1 : rows;
+    }
 
     return (lastToDisplay.difference(firstToDisplay).inDays + 1) ~/ 7;
   }
