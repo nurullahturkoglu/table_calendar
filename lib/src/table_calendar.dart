@@ -113,6 +113,13 @@ class TableCalendar<T> extends StatefulWidget {
   /// Wether to display only weekdays, will exclude all days in [weekendDays].
   final bool onlyWeekdays;
 
+  /// When enabled (and `onlyWeekdays` is true), calendar will not render
+  /// leading/trailing month rows that contain no days from the focused month.
+  ///
+  /// This is useful with `onlyWeekdays: true` + `calendarStyle.outsideDaysVisible: false`
+  /// to avoid completely empty first/last rows when the month starts/ends on weekend.
+  final bool trimEmptyWeekRows;
+
   /// Used for setting the height of `TableCalendar`'s rows.
   final double rowHeight;
 
@@ -237,6 +244,7 @@ class TableCalendar<T> extends StatefulWidget {
     this.shouldFillViewport = false,
     this.weekNumbersVisible = false,
     this.onlyWeekdays = false,
+    bool? trimEmptyWeekRows,
     this.rowHeight = 52.0,
     this.daysOfWeekHeight = 16.0,
     this.formatAnimationDuration = const Duration(milliseconds: 200),
@@ -281,7 +289,12 @@ class TableCalendar<T> extends StatefulWidget {
         focusedDay = normalizeDate(focusedDay),
         firstDay = normalizeDate(firstDay),
         lastDay = normalizeDate(lastDay),
-        currentDay = currentDay ?? DateTime.now();
+        currentDay = currentDay ?? DateTime.now(),
+        trimEmptyWeekRows = trimEmptyWeekRows ??
+            (onlyWeekdays &&
+                calendarFormat == CalendarFormat.month &&
+                !sixWeekMonthsEnforced &&
+                !calendarStyle.outsideDaysVisible);
 
   @override
   State<TableCalendar<T>> createState() => _TableCalendarState<T>();
@@ -518,6 +531,7 @@ class _TableCalendarState<T> extends State<TableCalendar<T>> {
             onVerticalSwipe: _swipeCalendarFormat,
             onlyWeekdays: widget.onlyWeekdays,
             weekendDays: widget.weekendDays,
+            trimEmptyWeekRows: widget.trimEmptyWeekRows,
             onPageChanged: (focusedDay) {
               _focusedDay.value = focusedDay;
               widget.onPageChanged?.call(focusedDay);

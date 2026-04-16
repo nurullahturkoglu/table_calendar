@@ -3,8 +3,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:table_calendar/src/shared/utils.dart';
+import 'package:table_calendar/src/table_calendar_base.dart';
 import 'package:table_calendar/src/widgets/calendar_page.dart';
-import 'package:table_calendar/table_calendar.dart';
 
 class CalendarCore extends StatelessWidget {
   final DateTime? focusedDay;
@@ -31,6 +31,7 @@ class CalendarCore extends StatelessWidget {
   final void Function(int, DateTime) onPageChanged;
   final bool onlyWeekdays;
   final List<int> weekendDays;
+  final bool trimEmptyWeekRows;
 
   const CalendarCore({
     super.key,
@@ -58,7 +59,44 @@ class CalendarCore extends StatelessWidget {
     this.scrollPhysics,
     this.onlyWeekdays = false,
     this.weekendDays = kDefaultWeekendDays,
+    this.trimEmptyWeekRows = false,
   }) : assert(!dowVisible || (dowHeight != null && dowBuilder != null));
+
+  List<DateTime> _trimOutsideMonthWeeks({
+    required List<DateTime> days,
+    required DateTime focusedMonth,
+    required int daysInWeek,
+  }) {
+    if (days.isEmpty) return days;
+    if (days.length % daysInWeek != 0) return days;
+
+    final weeks = <List<DateTime>>[];
+    for (int i = 0; i < days.length; i += daysInWeek) {
+      weeks.add(days.sublist(i, i + daysInWeek));
+    }
+
+    bool hasInMonthDay(List<DateTime> week) =>
+        week.any((d) => d.month == focusedMonth.month && d.year == focusedMonth.year);
+
+    int start = 0;
+    while (start < weeks.length && !hasInMonthDay(weeks[start])) {
+      start++;
+    }
+
+    int end = weeks.length - 1;
+    while (end >= start && !hasInMonthDay(weeks[end])) {
+      end--;
+    }
+
+    if (start == 0 && end == weeks.length - 1) {
+      return days;
+    }
+    if (start > end) {
+      return const <DateTime>[];
+    }
+
+    return weeks.sublist(start, end + 1).expand((w) => w).toList(growable: false);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -69,9 +107,23 @@ class CalendarCore extends StatelessWidget {
       itemBuilder: (context, index) {
         final baseDay = _getBaseDay(calendarFormat, index);
         final visibleRange = _getVisibleRange(calendarFormat, baseDay);
-        final visibleDays = !onlyWeekdays
+        var visibleDays = !onlyWeekdays
             ? _daysInRange(visibleRange.start, visibleRange.end)
             : _weekDaysInRange(visibleRange.start, visibleRange.end);
+        final daysInWeek = !onlyWeekdays
+            ? DateTime.daysPerWeek
+            : DateTime.daysPerWeek - weekendDays.length;
+
+        if (trimEmptyWeekRows &&
+            calendarFormat == CalendarFormat.month &&
+            onlyWeekdays &&
+            !sixWeekMonthsEnforced) {
+          visibleDays = _trimOutsideMonthWeeks(
+            days: visibleDays,
+            focusedMonth: baseDay,
+            daysInWeek: daysInWeek,
+          );
+        }
 
         final actualDowHeight = dowVisible ? dowHeight! : 0.0;
         final constrainedRowHeight = constraints.hasBoundedHeight
@@ -86,9 +138,7 @@ class CalendarCore extends StatelessWidget {
           rowDecoration: rowDecoration,
           tableBorder: tableBorder,
           tablePadding: tablePadding,
-          daysInWeek: !onlyWeekdays
-              ? DateTime.daysPerWeek
-              : DateTime.daysPerWeek - weekendDays.length,
+          daysInWeek: daysInWeek,
           dowBuilder: (context, day) {
             return SizedBox(
               height: dowHeight,
